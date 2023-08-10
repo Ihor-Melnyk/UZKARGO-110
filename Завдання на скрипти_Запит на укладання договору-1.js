@@ -1,12 +1,10 @@
-//SendSignDoc - отправка подписb документа во вчасно
-// приклади реалізованих функцій
-function onTaskExecutePublishProtocol(routeStage) {
+//Скрипт 1. Передача результату опрацювання документа в ESIGN
+function onTaskExecuteCheckDirectory(routeStage) {
   debugger;
   var signatures = [];
   var command;
   if (routeStage.executionResult == "executed") {
     command = "CompleteTask";
-
     signatures = EdocsApi.getSignaturesAllFiles();
   } else {
     command = "RejectTask";
@@ -58,54 +56,43 @@ function onTaskExecuteMainTask(routeStage) {
 }
 
 //Скрипт 2. Зміна властивостей атрибутів при створені документа
-//дописати умову створення з есайн
 function setInitialRequired() {
-  controlRequired("edocsIncomeDocumentNumber");
-  controlRequired("edocsIncomeDocumentDate");
-  controlRequired("TelephoneContactPerson");
+  if (CurrentDocument.inExtId) {
+    controlRequired("edocsIncomeDocumentNumber");
+    controlRequired("edocsIncomeDocumentDate");
+    controlRequired("TelephoneContactPerson");
+  }
 }
 
-function controlRequired(CODE) {
+function controlRequired(CODE, required = true) {
   const control = EdocsApi.EdocsApi.getControlProperties(CODE);
-  control.required = true;
+  control.required = required;
   EdocsApi.EdocsApi.getControlProperties(control);
 }
 
 function onCardInitialize() {
   setInitialRequired();
+  CheckDirectoryTask();
 }
-//edocs
-// {
-//     "id": 8536,
-//     "url": "https://rc-online.e-docs.ua/#!/case/8536",
-//     "templateName": "Службова записка на безальтернативну закупівлю",
-//     "name": "Службова записка на безальтернативну закупівлю №8536",
-//     "initiatorId": 23364,
-//     "initiatorName": "Сковорода Г.",
-//     "isDraft": true,
-//     "executionState": "draft",
-//     "created": "2023-08-08T09:42:57.393Z",
-//     "version": 0,
-//     "inExtId": null,
-//     "createdByExtSys": null,
-//     "statusName": null,
-//     "statusId": null
-// }
 
-//esign
-// {
-//     "id": 8537,
-//     "url": "https://rc-online.e-docs.ua/#!/case/8537",
-//     "templateName": "Службова записка на безальтернативну закупівлю",
-//     "name": "Службова записка на безальтернативну закупівлю №8537",
-//     "initiatorId": 23247,
-//     "initiatorName": "Мельник І.",
-//     "isDraft": true,
-//     "executionState": "draft",
-//     "created": "2023-08-08T09:48:25.400Z",
-//     "version": 0,
-//     "inExtId": "09a75d17-d4c6-4d32-8fdf-b33279a1973e",
-//     "createdByExtSys": "esign",
-//     "statusName": null,
-//     "statusId": null
-// }
+//Скрипт 3. Неможливість внесення змін в поля карточки
+function CheckDirectoryTask() {
+  const stateTask = EdocsApi.getCaseTaskDataByCode("CheckDirectory").state;
+  if (stateTask == "assigned" || stateTask == "inProgress" || stateTask == "completed'") {
+    controlDisabled("edocsIncomeDocumentNumber");
+    controlDisabled("edocsIncomeDocumentDate");
+    controlDisabled("TelephoneContactPerson");
+    controlDisabled("Comment");
+  } else {
+    controlDisabled("edocsIncomeDocumentNumber", false);
+    controlDisabled("edocsIncomeDocumentDate", false);
+    controlDisabled("TelephoneContactPerson", false);
+    controlDisabled("Comment", false);
+  }
+}
+
+function controlDisabled(CODE, disabled = true) {
+  const control = EdocsApi.getControlProperties(CODE);
+  control.disabled = disabled;
+  EdocsApi.setControlProperties(control);
+}
